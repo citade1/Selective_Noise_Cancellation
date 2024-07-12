@@ -1,8 +1,11 @@
 # Selective Noise Cancellation (SNC) Design/Thought Process
-
 ## SNC: Transformer (Whisper) + Self-Supervised Learning (MixIT)
 
 **(This project is not complete and will be continuously updated)**
+
+<div style="text-align:center;">
+  <img width="500" src="https://github.com/user-attachments/assets/d7e244fa-b4ec-40a0-961c-ed1925407272">
+</div>
 
 ### 0. Problem Statement/Motivation
 Raw audio recordings from real-world environments contain a mixture of various sounds. For instance, a street recording might include traffic noise, pedestrian chatter, and other ambient sounds all blended into one audio track. Selective Noise Cancellation (SNC) is a project that focuses on detecting and separating sounds with the specific aim of filtering out unwanted noise rather than merely separating sounds. The ultimate goal of SNC aligns closely with that of sound separation: to isolate all distinct audio signals within a mixed recording. (However how fine or pure these signals need to be considered independent is still debatable and hasn’t been fully explored yet in this project.)
@@ -57,9 +60,6 @@ SNC aims to classify important sounds from background noise, which may vary depe
 
 ### 2. Model Architecture: Transformer-Based Sound Separation Model
 The transformer-based sound separation model is designed to efficiently separate important sounds from background noise using neural network architectures. This model leverages the capabilities of transformers, which have proven effective in various tasks requiring attention to sequential data, such as natural language processing and, more recently, audio processing.
-<div>
-  <img width="500" src="https://github.com/user-attachments/assets/d7e244fa-b4ec-40a0-961c-ed1925407272">
-</div>
 
 ### 2.1 Key Components
 
