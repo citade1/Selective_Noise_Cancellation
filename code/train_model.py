@@ -1,4 +1,17 @@
+import os
+import numpy as np
+import torch
+from torch.utils.data import DataLoader, Dataset
+import torch.optim as optim
+import torch.nn as nn
 from transformer_sound_separator import TransformerSoundSeparator
+
+# Paths to be updated
+load_path = '/content/drive/MyDrive/sncWhisper/spectrograms/'
+
+# Load the spectrograms
+mixture_spectrograms = np.load(os.path.join(load_path, 'mixture_spectrograms.npy'))
+source_spectrograms = np.load(os.path.join(load_path, 'source_spectrograms.npy'))
 
 class SoundSeparationDataset(Dataset):
     def __init__(self, mixtures, sources):
