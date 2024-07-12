@@ -16,6 +16,7 @@ from transformers import WhisperProcessor, WhisperModel
 # Paths to be updated 
 target_path = '/content/drive/MyDrive/sncWhisper/target'
 noise_path = '/content/drive/MyDrive/sncWhisper/noise'
+save_path = '/content/drive/MyDrive/sncWhisper/spectrograms/'
 
 def load_audio_files(file_paths):
     audio_data = []
@@ -53,3 +54,7 @@ def audio_to_spectrogram(audio_data):
 # Convert mixtures and sources to spectrograms
 mixture_spectrograms = audio_to_spectrogram(mixtures)
 source_spectrograms = audio_to_spectrogram(sources)
+
+# Save the spectrograms
+np.save(os.path.join(save_path, 'mixture_spectrograms.npy'), mixture_spectrograms)
+np.save(os.path.join(save_path, 'source_spectrograms.npy'), source_spectrograms)
