@@ -1,16 +1,16 @@
-# Selective Noise Cancellation (SNC) Design/Thought Process
-## SNC: Transformer (Whisper) + Self-Supervised Learning (MixIT)
+# Selective Noise Cancellation (SNC) Design Process
+### 0. Problem Statement/Motivation
+Raw audio recordings from real-world environments contain a mixture of various sounds. For instance, a street recording might include traffic noise, pedestrian chatter, and other ambient sounds all blended into one audio track. Selective Noise Cancellation (SNC) is a project that focuses on detecting and separating sounds with the specific aim of filtering out unwanted noise rather than merely separating sounds. The ultimate goal of SNC aligns closely with that of sound separation: to isolate all distinct audio signals within a mixed recording. (However how fine or pure these signals need to be considered independent is still debatable and hasn’t been fully explored yet in this project.)
+
+SNC aims to classify important sounds from background noise, which may vary depending on the detected environment. By filtering out irrelevant sounds and preserving only the significant ones, SNC aims to achieve true 'selective' noise cancellation. This technology could have diverse applications across various industries, extending beyond speech recognition and vocal-instrument separation, to noise-cancelling devices for consumer electronics, construction sites, and many other settings requiring the detection, separation, and elimination of extraneous sounds.
+
+## Attention-based Sound Separation: Transformer (Whisper) + Self-Supervised Learning (MixIT)
 
 **(This project is not complete and will be continuously updated)**
 
 <div style="text-align:center;">
   <img width="500" src="https://github.com/user-attachments/assets/d7e244fa-b4ec-40a0-961c-ed1925407272">
 </div>
-
-### 0. Problem Statement/Motivation
-Raw audio recordings from real-world environments contain a mixture of various sounds. For instance, a street recording might include traffic noise, pedestrian chatter, and other ambient sounds all blended into one audio track. Selective Noise Cancellation (SNC) is a project that focuses on detecting and separating sounds with the specific aim of filtering out unwanted noise rather than merely separating sounds. The ultimate goal of SNC aligns closely with that of sound separation: to isolate all distinct audio signals within a mixed recording. (However how fine or pure these signals need to be considered independent is still debatable and hasn’t been fully explored yet in this project.)
-
-SNC aims to classify important sounds from background noise, which may vary depending on the detected environment. By filtering out irrelevant sounds and preserving only the significant ones, SNC aims to achieve true 'selective' noise cancellation. This technology could have diverse applications across various industries, extending beyond speech recognition and vocal-instrument separation, to noise-cancelling devices for consumer electronics, construction sites, and many other settings requiring the detection, separation, and elimination of extraneous sounds.
 
 ### 1. Dataset
 
