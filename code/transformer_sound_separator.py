@@ -1,3 +1,7 @@
+import torch
+import torch.nn as nn
+from transformers import WhisperProcessor, WhisperModel
+
 class TransformerSoundSeparator(nn.Module):
     def __init__(self):
         super(TransformerSoundSeparator, self).__init__()
