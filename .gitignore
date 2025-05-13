@@ -1,0 +1,40 @@
+# ------------------------------
+# .gitignore for ML Projects
+# ------------------------------
+
+# Datasets and outputs
+data/
+_desolete/
+*.pt
+*.npy
+*.wav
+*.mp3
+
+# Reports
+references/
+reports/
+
+# Logs and experiments
+runs/
+logs/
+checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter checkpoints
+*.ipynb_checkpoints
+
+# Colab and environment files
+*.zip
+.env
+.DS_Store
+.idea/
+.vscode/
+
+# System files
+Thumbs.db
+Desktop.ini
