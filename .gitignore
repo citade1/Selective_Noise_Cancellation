@@ -19,6 +19,9 @@ runs/
 logs/
 checkpoints/
 
+# backups
+*_backup
+
 # Python cache
 __pycache__/
 *.pyc
