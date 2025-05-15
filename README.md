@@ -1,6 +1,5 @@
 # Selective Noise Cancellation (SNC)
-
-> A deep learning pipeline for separating meaningful human speech from noisy background environments, inspired by sound separation systems like Spleeter and Demucs.
+A deep learning pipeline for separating meaningful human speech from noisy background environments, inspired by sound separation systems like Spleeter and Demucs.
 
 ---
 
