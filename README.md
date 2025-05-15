@@ -38,18 +38,34 @@ _See [`models/attention_unet.py`](./models/attention_unet.py) for full details._
 ---
 ## Training Procedure
 
-- **Target**: Clean subway announcements sourced from official metro websites (e.g., Seoul Metro)
-- **Noise**:
-  - 2 ambient clips from [FSD50K](https://github.com/eduardofv/FSD50K) (filtered by ambient labels)
-  - 1 miscellaneous noise clip from Freesound or custom recordings
+### Dataset
+- **Target (Clean)**: Subway announcements sourced from official metro websites (e.g., Seoul Metro).
+- **Noise Sources**:
+  - **FSD50K**: 2 ambient/environmental clips per mixture, filtered by label
+  - **Miscellaneous**: 1 additional noise clip from Freesound or custom recordings
 
-- **Mixture**: On-the-fly mixing of clean + noise at random SNR (5–15 dB) using RMS normalization
+### On-the-Fly Mixture Generation
+- Clean + 3 noise clips are mixed dynamically during training
+- Each mixture uses a random Signal-to-Noise Ratio (SNR) between **5–15 dB**
+- RMS normalization is applied to standardize mixing
 
-- **Splits**: Train/val/test split via `torch.utils.data.random_split` with fixed seed
+### Data Splitting
+- Dataset is split into **train**, **validation**, and **test** sets
+- Split is done with `torch.utils.data.random_split` using a fixed `torch.Generator(seed=42)` for reproducibility
 
-- **Inputs**: 5-second waveforms → log-magnitude spectrograms  
-- **Loss**: `MSELoss`  
-- **Metric**: SNR (Signal-to-Noise Ratio)
+### Spectrogram Processing
+- All audio clips are **5 seconds long**
+- Each waveform is converted to a **log-magnitude spectrogram** using `torch.stft`
+- Final input shape: `(1, 257, 625)` — (channel, frequency bins, time frames)
+
+### Training
+- Supported models: `UNet`, `AttentionUNet`
+- Optimizer: `Adam`, `AdamW`, or `SGD` (configurable via CLI)
+- The model predicts a clean spectrogram from noisy input mixtures
+
+### Evaluation Metrics
+- **Loss Function**: Mean Squared Error (`torch.nn.MSELoss`)
+- **Primary Metric**: Signal-to-Noise Ratio (SNR), reported in decibels
 
 ---
 ## Results
