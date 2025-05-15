@@ -1,36 +1,20 @@
-import torch 
+import os
+import random
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset, random_split
-from models import UNet, AttentionUNet, StackedTransformerEncoder
-import os
-import argparse
-from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
-
+from models import UNet, AttentionUNet, StackedTransformerEncoder
+from utils import waveform_to_spectrogram, mix_audio, load_audio, split_dataset
+from data_preparation import SpectrogramDataset
+from datetime import datetime
+import argparse
+from tqdm import tqdm
 
 # Colab override for argpase 
 # import sys
 # sys.argv = ['train.py', '--model', 'attention', '--epochs', '10', '--batch_size', '8', '--optimizer', 'adamw']
-
-# ---------------------
-# Dummy Dataset for now
-# ---------------------
-class DummySpectrogramDataset(Dataset):
-    def __init__(self, num_samples=100, freq_bins=128, time_frames=256):
-        self.num_samples = num_samples
-        self.freq_bins = freq_bins
-        self.time_frames = time_frames
-    
-    def __len__(self):
-        return self.num_samples
-    
-    def __getitem__(self, idx):
-        clean = torch.randn(1, self.freq_bins, self.time_frames)
-        noise = 0.5 * torch.randn(1, self.freq_bins, self.time_frames)
-        mixture = clean + noise
-        return mixture, clean
-
 
 # -----------------
 # Evaluation Metric
@@ -47,10 +31,9 @@ def snr(pred, target):
 # ----------------
 def train(model, dataloader, criterion, optimizer, scheduler, device, epoch, writer, val_loader, best_val_loss, save_path):
     model.train()
-    running_loss = 0.0
-    running_snr = 0.0
+    running_loss, running_snr = 0.0, 0.0
 
-    for i, (mixture, target) in enumerate(dataloader):
+    for i, (mixture, target) in enumerate(tqdm(dataloader, desc="Training")):
         mixture, target = mixture.to(device), target.to(device)
 
         optimizer.zero_grad()
@@ -110,6 +93,8 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--optimizer', type=str, choices=['adam', 'adamw', 'sgd'], default='adam')
     parser.add_argument('--save_dir', type=str, default="checkpoints")
+    parser.add_argument('--snr_min', type=float, default=5.0)
+    parser.add_argument('--snr_max', type=float, default=15.0)
     args = parser.parse_args()
 
     os.makedirs(args.save_dir, exist_ok=True)
@@ -131,12 +116,15 @@ if __name__ == "__main__":
         ).to(device)
     
     # Dataset and Dataloader
-    dataset = DummySpectrogramDataset(num_samples=500)
-    train_len = int(0.8 * len(dataset))
-    val_len = len(dataset) - train_len
-    train_set, val_set = random_split(dataset, [train_len, val_len])
+    dataset = SpectrogramDataset(
+        target_dir="data/targets",
+        noise_dirs=["data/noises/fsd50k_clips", "data/noises/freesound_misc_clips"],
+        snr_range=(args.snr_min, args.snr_max),
+        n_noises=3
+    )
+    train_set, val_set, _ = split_dataset(dataset, seed=42)
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
-    val_loader = DataLoader(val_set,batch_size=args.batch_size)
+    val_loader = DataLoader(val_set, batch_size=args.batch_size)
 
     # Loss
     criterion = nn.MSELoss()
@@ -162,6 +150,7 @@ if __name__ == "__main__":
     
     for epoch in range(args.epochs):
         print(f"\nEpoch {epoch+1}/{args.epochs}")
-        best_val_loss = train(model, train_loader, criterion, optimizer, scheduler, device, epoch, writer, val_loader, best_val_loss, save_path)
+        best_val_loss = train(model, train_loader, criterion, optimizer, scheduler, device, 
+                              epoch, writer, val_loader, best_val_loss, save_path)
     
     writer.close()

@@ -1,0 +1,13 @@
+from torch.utils.data import random_split
+import torch
+
+def split_dataset(dataset, train_ratio=0.8, val_ratio=0.1, seed=42):
+    length = len(dataset)
+    train_len = length * train_ratio
+    val_len = length * val_ratio
+    test_len = length - train_len - val_len
+
+    generator = torch.Generator().manual_seed(seed)
+    train_set, val_set, test_set = random_split(dataset, [train_len, val_len, test_len], generator=generator)
+    
+    return train_set, val_set, test_set

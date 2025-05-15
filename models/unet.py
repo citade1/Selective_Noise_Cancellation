@@ -50,7 +50,7 @@ class UNet(nn.Module):
             x = self.upsamples[i](x)
             skip = skip_connections[i]
             if x.shape != skip.shape:
-                x = F.interpolate(x, size=skip.shape[2:])
+                x = F.interpolate(x, size=skip.shape[2:], mode="bilinear")
             x = torch.cat((skip, x), dim=1)
             x = self.decoder_blocks[i](x)
         

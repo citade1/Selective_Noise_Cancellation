@@ -28,9 +28,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Jupyter checkpoints
-*.ipynb_checkpoints
-
 # Colab and environment files
 *.zip
 .env
@@ -41,3 +38,6 @@ __pycache__/
 # System files
 Thumbs.db
 Desktop.ini
+
+# Config files
+*.yaml

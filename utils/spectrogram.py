@@ -2,9 +2,9 @@ import torch
 import torchaudio
 import torch.nn.functional as F
 
-def waveform_to_spectrogram(waveform, n_fft=512, hop_length=128, win_length=None, log=True, eps=1e-8):
+def waveform_to_spectrogram(waveform, n_fft=512, hop_length=128, win_length=None, log=False, eps=1e-8):
     """
-    Convert waveform(1D tensor) to (log-)magnitude spectrogram
+    Convert waveform(1D tensor) to magnitude spectrogram
 
     Args:
         waveform: shape(T, )
@@ -28,11 +28,11 @@ def waveform_to_spectrogram(waveform, n_fft=512, hop_length=128, win_length=None
     if log:
         magnitude_spectrogram = torch.log(magnitude_spectrogram + eps)
     
-    return magnitude_spectrogram
+    return magnitude_spectrogram.unsqueeze(0)
 
-def spectrogram_to_waveform(magnitude_spectrogram, phase=None, n_fft=512, hop_length=128, win_length=None, num_iters=32, log=True):
+def spectrogram_to_waveform(magnitude_spectrogram, phase=None, n_fft=512, hop_length=128, win_length=None, num_iters=32, log=False):
     """
-    Convert (log-)magnitude spectrogram back to waveform
+    Convert magnitude spectrogram back to waveform
 
     Args:
         phase: Optional phase info. If None, uses Griffin-Lim as default.

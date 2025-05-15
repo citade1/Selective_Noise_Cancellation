@@ -68,15 +68,16 @@ class AttentionUNet(nn.Module):
             x = x.permute(0, 2, 3, 1).reshape(B, H*W, C) # shape = (B, T, C), H*W becomes the sequence length T, and channel_num C becomes feature dimension
             x = self.attn(x)
             x = x.reshape(B, H, W, C).permute(0, 3, 1, 2) # Back to (B, C, H, W)
-        else:
-            x = self.bottleneck(x)
+        
+        # always use this bottleneck (with or without attention) to match the shape and contain expressiveness    
+        x = self.bottleneck(x)
         
         # Decoder
         for idx in range(0, len(self.upsamples)):
             x = self.upsamples[idx](x)
             skip_connection = skip_connections[idx]
             if x.shape != skip_connection.shape:
-                x = F.interpolate(x, size=skip_connection.shape[2:])
+                x = F.interpolate(x, size=skip_connection.shape[2:], mode="bilinear")
             x = torch.concat((x, skip_connection), dim=1)
             x = self.decoder[idx](x)
 

@@ -9,20 +9,20 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
         super().__init__()
 
-        pe = torch.zeros(max_len, d_model) # shape = (T, D) -> (max sequence length, embedding dimensions)
+        self.pe = torch.zeros(max_len, d_model) # shape = (T, D) -> (max sequence length, embedding dimensions)
 
         position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1) # pos, shape=(T, 1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)) # denominator: e^(-log(10000)*2i/d_model), shape=(D/2,)
 
-        pe[:, 0::2] = torch.sin(position * div_term) # shape = (T, D/2)
-        pe[:, 1::2] = torch.cos(position * div_term) # shape = (T, D/2)
+        self.pe[:, 0::2] = torch.sin(position * div_term) # shape = (T, D/2)
+        self.pe[:, 1::2] = torch.cos(position * div_term) # shape = (T, D/2)
 
-        pe.unsqueeze(0).transpose(1,2) # shape = (1, D, T)
+        self.pe.unsqueeze(0) # shape = (1, T, D)
 
-        self.register_buffer("pe", pe) # non-learnable
+        self.register_buffer("pe", self.pe) # non-learnable
 
     def forward(self, x):
-        # x : (B, D, T) ->(batch, embedding_dim, sequence_len)
+        # x : (B, T, D) ->(batch, sequence_len, embedding_dim)
         T = x.size(2) 
         x = x + self.pe[:, :, :T]
 
@@ -40,8 +40,8 @@ class MultiHeadSelfAttention(nn.Module):
         super().__init__()
         assert d_model % n_heads == 0
 
-        self.d_model = d_model # embedding dimension OR input/output dimension of attention block : 512
-        self.n_heads = n_heads # 8 
+        self.d_model = d_model # embedding dimension OR input/output dimension of attention block : 256
+        self.n_heads = n_heads # 4
         self.d_k = d_model // n_heads # dimension of each head : 64 
 
         self.qkv_projection = nn.Linear(d_model, 3*d_model) # projects input into a single matrix, which will be divided into Q, K, V
@@ -105,11 +105,13 @@ class StackedTransformerEncoder(nn.Module):
     Stacks multiple TransformerEncoderBlocks.
     Useful for deeper attention bottleneck.
     """
-    def __init__(self, d_model, n_heads, dim_ff, num_layers=1, dropout=0.1):
+    def __init__(self, d_model, n_heads, dim_ff, num_layers=1, dropout=0.1, max_len=5000):
         super().__init__()
+        self.pos_enc = PositionalEncoding(d_model, max_len)
         self.layers = nn.Sequential(*[TransformerEncoderBlock(d_model, n_heads, dim_ff, dropout) for _ in range(num_layers)])
     
     def forward(self, x):
+        x = self.pos_enc(x)
         return self.layers(x)
     
 
