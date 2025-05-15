@@ -51,9 +51,6 @@ _See [`models/attention_unet.py`](./models/attention_unet.py) for full details._
 - **Loss**: `MSELoss`  
 - **Metric**: SNR (Signal-to-Noise Ratio)
 
-```bash
-python train.py --model attention --epochs 10 --batch_size 8
-```
 ---
 ## Results
 
