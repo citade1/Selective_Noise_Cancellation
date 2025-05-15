@@ -70,7 +70,7 @@ _See [`models/attention_unet.py`](./models/attention_unet.py) for full details._
 ---
 ## Results
 
-Quantitative results will be added after training is completed.
+Quantitative results will be added shortly.
 Planned:
 Signal-to-Noise Ratio (SNR)
 (Optional) PESQ and STOI for perceptual quality
