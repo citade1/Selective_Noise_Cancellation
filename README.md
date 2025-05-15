@@ -1,10 +1,10 @@
-# 🎧 Selective Noise Cancellation (SNC)
+# Selective Noise Cancellation (SNC)
 
 > A deep learning pipeline for separating meaningful human speech from noisy background environments, inspired by sound separation systems like Spleeter and Demucs.
 
 ---
 
-## 📌 Overview
+## Overview
 
 This project is a reimplementation of an undergraduate deep learning course project on noise cancellation — now upgraded with:
 
@@ -17,14 +17,14 @@ The goal is to isolate meaningful human speech (especially public announcements)
 
 ---
 
-## 🧠 Model Architecture
+## Model Architecture
 
 Two models are currently supported:
 
 - **UNet**: A Conv2D-based encoder-decoder baseline
 - **AttentionUNet**: UNet with a Transformer bottleneck for richer global context
 
-### 🔍 AttentionUNet (default model)
+### AttentionUNet 
 
 The AttentionUNet combines a Conv2D-based encoder-decoder structure with a Transformer bottleneck, enabling both local and global pattern learning.
 
@@ -40,7 +40,7 @@ _See [`models/attention_unet.py`](./models/attention_unet.py) for full details._
 
 ---
 
-## 🏋️ Training Procedure
+## Training Procedure
 
 - **Target**: Clean subway announcements sourced from official metro websites (e.g., Seoul Metro)
 - **Noise**:
