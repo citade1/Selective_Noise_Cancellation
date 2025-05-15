@@ -2,7 +2,6 @@
 A deep learning pipeline for separating meaningful human speech from noisy background environments, inspired by sound separation systems like Spleeter and Demucs.
 
 ---
-
 ## Overview
 
 This project is a reimplementation of an undergraduate deep learning course project on noise cancellation — now upgraded with:
@@ -15,7 +14,6 @@ This project is a reimplementation of an undergraduate deep learning course proj
 The goal is to isolate meaningful human speech (especially public announcements) from background subway noise using magnitude spectrograms and CNN/Transformer-based models.
 
 ---
-
 ## Model Architecture
 
 Two models are currently supported:
@@ -38,7 +36,6 @@ The AttentionUNet combines a Conv2D-based encoder-decoder structure with a Trans
 _See [`models/attention_unet.py`](./models/attention_unet.py) for full details._
 
 ---
-
 ## Training Procedure
 
 - **Target**: Clean subway announcements sourced from official metro websites (e.g., Seoul Metro)
@@ -58,7 +55,6 @@ _See [`models/attention_unet.py`](./models/attention_unet.py) for full details._
 python train.py --model attention --epochs 10 --batch_size 8
 ```
 ---
-
 ## Results
 
 Quantitative results will be added after training is completed.
@@ -69,7 +65,6 @@ Signal-to-Noise Ratio (SNR)
 Audio samples of (mixture, clean, noise, predicted) will be shared.
 
 ---
-
 ## How to Use
 
 ### Evaluate a Trained Model
@@ -85,7 +80,6 @@ python train.py --model attention --epochs 10 --batch_size 8
 Additional CLI flags (e.g., --optimizer, --snr_min, --save_dir) can be found via: train.py
 
 ---
-
 ## Acknowledgements
 
 This project was inspired by:
