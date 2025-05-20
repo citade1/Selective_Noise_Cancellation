@@ -4,10 +4,10 @@ import torch
 from tqdm import tqdm
 from utils import load_audio, normalize_audio, to_fixed_length
 
-# path to FSD50K data. It might differ to where to save the FSD50K dataset
-FSD_AUDIO_DIR = "/Volumes/Samsung_T5/FSD50K/FSD50K.audio"
-FSD_META_PATH = "/Volumes/Samsung_T5/FSD50K/FSD50K.ground_truth/dev.csv"
-OUTPUT_DIR = "data/noises/fsd50k_clips"
+# path to FSD50K data. It varies depending on where you unzipped the FSD50K dataset
+FSD_AUDIO_DIR = "/Volumes/Samsung_T5/data_snc/FSD50K/FSD50K.dev_audio"
+FSD_META_PATH = "/Volumes/Samsung_T5/data_snc/FSD50K/FSD50K.ground_truth/dev.csv"
+OUTPUT_DIR = "/Volumes/Samsung_T5/data_snc/noises/fsd50k_clips"
 
 DESIRED_LABELS = {
     # Vehicles & Subway-related

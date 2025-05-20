@@ -2,8 +2,9 @@ import os
 import torch
 from utils import load_audio, normalize_audio, to_fixed_length
 
-INPUT_DIR = "data/freesound_misc_clips"
-OUTPUT_DIR = "data/noises/freesound_misc_clips"
+# Path
+INPUT_DIR = "/Volumes/Samsung_T5/data_snc/freesound_misc_clips"
+OUTPUT_DIR = "/Volumes/Samsung_T5/data_snc/noises/fsd_misc_clips"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 DEFAULT_SR = 16000
@@ -11,9 +12,10 @@ SEGMENT_DURATION = 5.0 # seconds
 
 for root, _, files in os.walk(INPUT_DIR):
     for file in files:
-        if not file.endswith(".wav", ".mp3", ".flac"):
+        if file.startswith("._") or not file.endswith((".wav", ".mp3", ".flac")):
             continue
         try:
+            # load 
             file_path = os.path.join(root, file)
             waveform, sr = load_audio(file_path, DEFAULT_SR)
             waveform = normalize_audio(waveform, method="rms", target_level=0.1)

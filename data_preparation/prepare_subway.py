@@ -3,8 +3,8 @@ import torch
 from utils import load_audio, normalize_audio, mp3_to_wav, to_fixed_length
 
 # path to subway announcment data
-RAW_DIR = "data/subway_announcement"
-CLEAN_WAV_DIR = "data/targets"
+RAW_DIR = "/Volumes/Samsung_T5/data_snc/subway_announcement"
+CLEAN_WAV_DIR = "/Volumes/Samsung_T5/data_snc/targets"
 
 os.makedirs(CLEAN_WAV_DIR, exist_ok=True)
 
@@ -18,7 +18,7 @@ for line_folder in os.listdir(RAW_DIR): # line 1, line 2, ...
         continue
     
     for fname in os.listdir(line_path):
-        if not fname.endswith(".mp3"):
+        if fname.startswith("._") or not fname.endswith(".mp3"):
             continue
         
         mp3_path = os.path.join(line_path, fname) 
@@ -28,6 +28,7 @@ for line_folder in os.listdir(RAW_DIR): # line 1, line 2, ...
         wav_path = os.path.join(CLEAN_WAV_DIR, wav_filename)
 
         try:
+            # convert and load 
             mp3_to_wav(mp3_path, wav_path)
             waveform, sr = load_audio(wav_path, DEFAULT_SR)
             waveform = normalize_audio(waveform, method="rms", target_level=0.1)

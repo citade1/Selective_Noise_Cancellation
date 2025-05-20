@@ -1,5 +1,6 @@
 import torchaudio
 import torch
+import torch.nn.functional as F
 import random
 import os
 from pydub import AudioSegment
@@ -8,12 +9,23 @@ DEFAULT_SR = 16000
 
 
 def load_audio(filepath, sr=DEFAULT_SR):
-    """Load an audio file and resample if needed"""
-    waveform, original_sr = torchaudio.load(filepath)
-    if original_sr != sr:
-        waveform = torchaudio.functional.resample(waveform, orig_freq=original_sr, new_freq=sr)
-    return waveform.squeeze(0), sr
-
+    """Load an audio file(first with torchaudio then, if failed, with pydub)"""
+    try: 
+        waveform, original_sr = torchaudio.load(filepath)
+        if original_sr != sr:
+            waveform = torchaudio.functional.resample(waveform, orig_freq=original_sr, new_freq=sr)
+        return waveform, sr
+    except Exception as e:
+        try:
+            audio = AudioSegment.from_file(filepath)
+            audio = audio.set_channels(1).set_frame_rate(sr)
+            samples = audio.get_array_of_samples()
+            waveform = torch.tensor(samples, dtpye=torch.float32) / (2**15)
+            return waveform.unsquueze(0), sr
+        except Exception as fallback_error:
+            raise RuntimeError(f"Failed to load{filepath} with both torchaudio and pydub. \nOriginal error: {e}\nFallback error:{fallback_error}")
+        
+        
 
 def save_audio(filepath, waveform, sr=DEFAULT_SR):
     """Save a waveform to disk"""
@@ -78,26 +90,28 @@ def mp3_to_wav(input_path, output_path):
 
 def to_fixed_length(waveform, sr, duration_sec=5.0):
     """
-    Splits a waveform into segments of fixed length (default = 5 seconds)
-    Pads the last segment by repeating if it's shorter than the desired length
+    Splits or pad waveform to fixed-length segments(5 seconds)
     """
-    if waveform.dim()==2:
-        waveform = waveform.squeeze(0) # assume mono channel 
+    if waveform.dim()==1:
+        waveform = waveform.unsqueeze(0) # ensure shape (1,T)
     
-    split_waveforms = []
     total_len = waveform.shape[-1]
-    waveform_len = duration_sec * sr
-    start = 0
+    fixed_len = int(duration_sec * sr)
+    
+    segments = []
+    num_chunks = total_len // fixed_len
 
-    while start + waveform_len <= total_len:
-        split_waveforms.append(waveform[start:start+waveform_len])
-        start += waveform_len
+    for i in range(num_chunks):
+        segment = waveform[:, i*fixed_len:(i+1)*fixed_len]
+        segments.append(segment)
+        
     
     # handle remainder by padding
-    remaining = waveform[start:]
-    if remaining.shape[-1] > 0:
-        repeat_factor = (waveform_len // remaining.shape[-1]) + 1
-        padded = remaining.repeat(repeat_factor)[:waveform_len]
-        split_waveforms.append(padded)
+    remaining = total_len % fixed_len
+    if remaining > 0:
+        last = waveform[:, -remaining:]
+        pad_length = fixed_len - remaining
+        padded = F.pad(last, (0, pad_length))
+        segments.append(padded)
 
-    return split_waveforms
+    return segments
