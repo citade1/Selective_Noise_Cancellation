@@ -17,14 +17,14 @@ class PositionalEncoding(nn.Module):
         self.pe[:, 0::2] = torch.sin(position * div_term) # shape = (T, D/2)
         self.pe[:, 1::2] = torch.cos(position * div_term) # shape = (T, D/2)
 
-        self.pe.unsqueeze(0) # shape = (1, T, D)
+        self.pe = self.pe.unsqueeze(0) # shape = (1, T, D)
 
         self.register_buffer("pe", self.pe) # non-learnable
 
     def forward(self, x):
         # x : (B, T, D) ->(batch, sequence_len, embedding_dim)
-        T = x.size(2) 
-        x = x + self.pe[:, :, :T]
+        T = x.size(1) 
+        x = x + self.pe[:, :T, :]
 
         return x
 
@@ -54,14 +54,14 @@ class MultiHeadSelfAttention(nn.Module):
         B, T, D = x.shape
 
         qkv = self.qkv_projection(x) # (B, T, 3*D)
-        qkv = qkv.reshape(B, T, self.n_heads, 3*self.d_k).permute(2, 0, 1, 3) # (n_heads, B, T, 3*d_k)
-        q, k, v = torch.chunk(qkv, 3, dim=-1) # (n_head, B, T, d_k)
+        qkv = qkv.reshape(B, T, self.n_heads, 3*self.d_k).permute(0, 2, 1, 3) # (B, n_heads, T, 3*d_k)
+        q, k, v = torch.chunk(qkv, 3, dim=-1) # (B, n_heads, T, d_k)
 
-        scores = torch.matmul(q, k.transpose(-2,-1)) / math.sqrt(self.d_k) # (n_heads, B, T, T)
+        scores = torch.matmul(q, k.transpose(-2,-1)) / math.sqrt(self.d_k) # (B, n_heads, T, T)
         attn = F.softmax(scores, dim=-1) 
-        attended = torch.matmul(attn, v) # (n_heads, B, T, d_k)
-        attended = attended.permute(1, 2, 0, 3).reshape(B, T, D)
-
+        attended = torch.matmul(attn, v) # (B, n_heads, T, d_k)
+        attended = attended.permute(0, 2, 1, 3).reshape(B, T, D)
+        
         return self.output_matrix(attended)
 
 

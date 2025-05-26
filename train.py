@@ -1,20 +1,16 @@
 import os
-import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from models import UNet, AttentionUNet, StackedTransformerEncoder
-from utils import waveform_to_spectrogram, mix_audio, load_audio, split_dataset
+from utils import split_dataset
 from data_preparation import SpectrogramDataset
 from datetime import datetime
 import argparse
 from tqdm import tqdm
 
-# Colab override for argpase 
-# import sys
-# sys.argv = ['train.py', '--model', 'attention', '--epochs', '10', '--batch_size', '8', '--optimizer', 'adamw']
 
 # -----------------
 # Evaluation Metric
@@ -22,6 +18,8 @@ from tqdm import tqdm
 def snr(pred, target):
     signal_power = torch.mean(target**2)
     noise_power = torch.mean((target - pred)**2)
+    if noise_power < 1e-10:
+        return torch.tensor(float("inf")) # perfect match 
     snr = 10 * torch.log10(signal_power / (noise_power + 1e-8))
     return snr
 
@@ -89,19 +87,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, choices=['unet', 'attention'], default='unet')
     parser.add_argument('--epochs', type=int, default=5)
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--optimizer', type=str, choices=['adam', 'adamw', 'sgd'], default='adam')
     parser.add_argument('--save_dir', type=str, default="checkpoints")
-    parser.add_argument('--snr_min', type=float, default=5.0)
-    parser.add_argument('--snr_max', type=float, default=15.0)
+    parser.add_argument('--snr_min', type=float, default=-5.0)
+    parser.add_argument('--snr_max', type=float, default=5.0)
+    parser.add_argument('--n_noises', type=int, default=3)
+    parser.add_argument('--target_dir', type=str, required=True)
+    parser.add_argument('--noise_fsd_dir', type=str, required=True)
+    parser.add_argument('--noise_misc_dir', type=str, required=True)
     args = parser.parse_args()
 
     os.makedirs(args.save_dir, exist_ok=True)
     run_name = datetime.now().strftime("%Y%m%d-%H%M%S")
     writer = SummaryWriter(log_dir=os.path.join("runs", run_name))
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
     # model configuration
     if args.model == "unet":
@@ -117,14 +119,19 @@ if __name__ == "__main__":
     
     # Dataset and Dataloader
     dataset = SpectrogramDataset(
-        target_dir="data/targets",
-        noise_dirs=["data/noises/fsd50k_clips", "data/noises/freesound_misc_clips"],
+        target_dir=args.target_dir,
+        noise_fsd_dir=args.noise_fsd_dir,
+        noise_misc_dir=args.noise_misc_dir,
         snr_range=(args.snr_min, args.snr_max),
-        n_noises=3
+        n_noises=args.n_noises
     )
     train_set, val_set, _ = split_dataset(dataset, seed=42)
-    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=args.batch_size)
+    train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=0)
+    val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=0)
+    
+    for i, (mixture, target) in enumerate(train_loader):
+        print("Mixture shape:", mixture.shape)  # Expecting (B, 1, F, T)
+        break
 
     # Loss
     criterion = nn.MSELoss()
@@ -138,7 +145,7 @@ if __name__ == "__main__":
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     
     # Scheduler
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2)
 
     # Resume from checkpoint if exists
     best_val_loss = float('inf')

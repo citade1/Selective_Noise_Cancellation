@@ -21,6 +21,26 @@ Two models are currently supported:
 - **UNet**: A Conv2D-based encoder-decoder baseline
 - **AttentionUNet**: UNet with a Transformer bottleneck for richer global context
 
+###  Tensor Shape Convention
+
+This project uses the following standard for spectrogram tensor shapes throughout the pipeline:
+
+| Tensor Type         | Shape            | Description                              |
+|---------------------|------------------|------------------------------------------|
+| Raw waveform        | (T,)             | 1D time-domain audio                     |
+| Spectrogram         | (1, F, T)        | 1-channel magnitude spectrogram          |
+| Model input (batched) | (B, 1, F, T)    | Batch size B, 1 channel, F freq, T time  |
+| Model output        | (B, 1, F, T)     | Same shape as input                      |
+| Reconstructed audio | (T,)             | From inverse STFT (Griffin-Lim)          |
+
+Where:
+- `F` = number of frequency bins (e.g., 257 when n_fft=512)
+- `T` = number of time frames (varies with audio duration and hop size)
+- `1` = single audio channel
+
+This shape is consistent across data loading, spectrogram generation, and CNN-based model inputs.
+
+
 ### AttentionUNet 
 
 The AttentionUNet combines a Conv2D-based encoder-decoder structure with a Transformer bottleneck, enabling both local and global pattern learning.

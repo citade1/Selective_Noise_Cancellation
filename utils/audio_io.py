@@ -9,28 +9,31 @@ DEFAULT_SR = 16000
 
 
 def load_audio(filepath, sr=DEFAULT_SR):
-    """Load an audio file(first with torchaudio then, if failed, with pydub)"""
+    """Load an audio file(first with torchaudio, fallback to pydub). Returns 1D waveform"""
     try: 
         waveform, original_sr = torchaudio.load(filepath)
         if original_sr != sr:
             waveform = torchaudio.functional.resample(waveform, orig_freq=original_sr, new_freq=sr)
-        return waveform, sr
+    
     except Exception as e:
         try:
             audio = AudioSegment.from_file(filepath)
             audio = audio.set_channels(1).set_frame_rate(sr)
             samples = audio.get_array_of_samples()
             waveform = torch.tensor(samples, dtpye=torch.float32) / (2**15)
-            return waveform.unsquueze(0), sr
+            waveform = waveform.unsqueeze(0)
         except Exception as fallback_error:
             raise RuntimeError(f"Failed to load{filepath} with both torchaudio and pydub. \nOriginal error: {e}\nFallback error:{fallback_error}")
+    
+    if waveform.dim() == 2 and waveform.shape[0] > 1:
+        waveform = waveform.mean(dim=0, keepdim=True)
+    
+    return waveform.squeeze(0), sr
         
-        
-
 def save_audio(filepath, waveform, sr=DEFAULT_SR):
-    """Save a waveform to disk"""
-    torchaudio.save(filepath, waveform.unsqueeze(0), sr)
-
+    if waveform.dim()==1:
+        waveform = waveform.unsqueeze(0)
+    torchaudio.save(filepath, waveform, sr)
 
 def match_length(target_wave, noise_wave):
     """Truncate, pad or loop the noise to match target's length"""
@@ -51,6 +54,16 @@ def mix_audio(target_wave, noise_wave, snr_db):
     if target_wave.shape[-1] != noise_wave.shape[-1]:
         noise_wave = match_length(target_wave, noise_wave)
 
+    # ensure both target and noise are mono (1,T)
+    if noise_wave.dim()==1:
+        noise_wave = noise_wave.unsqueeze(0)
+    elif noise_wave.shape[0]>1:
+        noise_wave = noise_wave.mean(dim=0, keepdim=True)
+    if target_wave.dim()==1:
+        target_wave = target_wave.unsqueeze(0)
+    elif target_wave.shape[0]>1:
+        target_wave = target_wave.mean(dim=0, keepdim=True)
+
     # scale noise to achieve desired SNR
     signal_power = torch.mean(target_wave**2)
     noise_power = torch.mean(noise_wave**2)
@@ -58,6 +71,7 @@ def mix_audio(target_wave, noise_wave, snr_db):
     noise_scaled = noise_wave * factor
 
     mixture = target_wave + noise_scaled
+    
     return mixture.clamp(-1.0, 1.0), target_wave
 
 

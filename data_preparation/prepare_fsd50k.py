@@ -3,12 +3,36 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 from utils import load_audio, normalize_audio, to_fixed_length
+import argparse
 
-# path to FSD50K data. It varies depending on where you unzipped the FSD50K dataset
-FSD_AUDIO_DIR = "/Volumes/Samsung_T5/data_snc/FSD50K/FSD50K.dev_audio"
-FSD_META_PATH = "/Volumes/Samsung_T5/data_snc/FSD50K/FSD50K.ground_truth/dev.csv"
-OUTPUT_DIR = "/Volumes/Samsung_T5/data_snc/noises/fsd50k_clips"
+"""
+Preprocess FSD50K audio by:
+- Filtering relevant labels
+- Resampling to 16 kHz
+- Normalizing (RMS)
+- Segmenting into 5-second chunks
+- Saving as .pt tensors
+"""
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--fsd_audio_dir", type=str, required=True, help="path to FSD50K data")
+parser.add_argument("--fsd_meta_path", type=str, required=True, help="path fsd metadata, (filename_label)")
+parser.add_argument("--output_dir", type=str, required=True)
+args = parser.parse_args()
+
+# path to FSD50K data. 
+FSD_AUDIO_DIR = args.fsd_audio_dir
+FSD_META_PATH = args.fsd_meta_path
+OUTPUT_DIR = args.output_dir
+
+if not os.path.exists(FSD_AUDIO_DIR):
+    raise FileNotFoundError(f"fsd_audio_dir not found: {FSD_AUDIO_DIR}")
+if not os.path.exists(FSD_META_PATH):
+    raise FileNotFoundError(f"fsd_meta_path not found: {FSD_META_PATH}")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# relevant lables in the fsd50k dataset
 DESIRED_LABELS = {
     # Vehicles & Subway-related
     "train", "subway_and_metro_and_underground", "rail_transport", "bus", "motor_vehicle_(road)",
@@ -28,7 +52,6 @@ DESIRED_LABELS = {
 
 DEFAULT_SR = 16000
 SEGMENT_DURATION = 5.0 # seconds
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # load metadata
 meta_df = pd.read_csv(FSD_META_PATH)

@@ -37,8 +37,7 @@ class AttentionUNet(nn.Module):
         self.use_attention = attention_block is not None
         if self.use_attention:
             self.attn = attention_block(**attn_kwargs) 
-        else:
-            self.bottleneck = DoubleConv(features[-1], features[-1]*2)
+        self.bottleneck = DoubleConv(features[-1], features[-1]*2)
         
         # Decoder block
         self.upsamples = nn.ModuleList()

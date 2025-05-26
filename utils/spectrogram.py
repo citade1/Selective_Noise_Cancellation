@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 def waveform_to_spectrogram(waveform, n_fft=512, hop_length=128, win_length=None, log=False, eps=1e-8):
     """
-    Convert waveform(1D tensor) to magnitude spectrogram
+    Convert waveform(T,) to magnitude spectrogram
 
     Args:
         waveform: shape(T, )
@@ -14,7 +14,7 @@ def waveform_to_spectrogram(waveform, n_fft=512, hop_length=128, win_length=None
         log: Whether to return log-magnitude spectrogram.
         eps: Small constant epsilon to avoid log(0) when log=True
     
-    Returns: Spectrogram of shape(freq_bins, time_frames)
+    Returns: torch.Tensor: (1, F, T) single-channel spectrogram for CNN input
     """
     spectrogram = torch.stft(
         waveform,
@@ -32,7 +32,7 @@ def waveform_to_spectrogram(waveform, n_fft=512, hop_length=128, win_length=None
 
 def spectrogram_to_waveform(magnitude_spectrogram, phase=None, n_fft=512, hop_length=128, win_length=None, num_iters=32, log=False):
     """
-    Convert magnitude spectrogram back to waveform
+    Convert magnitude spectrogram(1,F,T) back to waveform(T,)
 
     Args:
         phase: Optional phase info. If None, uses Griffin-Lim as default.
@@ -40,6 +40,9 @@ def spectrogram_to_waveform(magnitude_spectrogram, phase=None, n_fft=512, hop_le
     
     Returns: Reconstructed waveform
     """
+    if magnitude_spectrogram.dim()==3:
+        magnitude_spectrogram = magnitude_spectrogram.squeeze(0)
+    
     if log:
         magnitude_spectrogram = torch.exp(magnitude_spectrogram)
     
