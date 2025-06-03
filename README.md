@@ -96,11 +96,7 @@ This shape is consistent across data loading, spectrogram generation, and CNN-ba
 
 ### 4. Dataset Splitting
 
-* Dataset is split into:
-
-  * **Train**
-  * **Validation**
-  * **Test**
+* Dataset is split into: **Train**/**Validation**/**Test**
 * Uses `torch.utils.data.random_split` with a fixed random seed (`torch.Generator(seed=42)`) for reproducibility.
 
 ### 5. Model Training
