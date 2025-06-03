@@ -38,7 +38,6 @@ The AttentionUNet combines a Conv2D-based encoder-decoder structure with a Trans
 
 *See [`models/attention_unet.py`](./models/attention_unet.py) for full details.*
 
----
 
 ## Tensor Shape Convention
 
