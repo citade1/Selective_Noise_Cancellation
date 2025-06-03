@@ -64,9 +64,9 @@ class AttentionUNet(nn.Module):
         # Bottleneck
         if self.use_attention:
             B, C, H, W = x.shape
-            x = x.permute(0, 2, 3, 1).reshape(B, H*W, C) # shape = (B, T, C), H*W becomes the sequence length T, and channel_num C becomes feature dimension
+            x = x.permute(0, 2, 3, 1).contiguous().reshape(B, H*W, C) # shape = (B, T, C), H*W becomes the sequence length T, and channel_num C becomes feature dimension
             x = self.attn(x)
-            x = x.reshape(B, H, W, C).permute(0, 3, 1, 2) # Back to (B, C, H, W)
+            x = x.reshape(B, H, W, C).permute(0, 3, 1, 2).contiguous() # Back to (B, C, H, W)
         
         # always use this bottleneck (with or without attention) to match the shape and contain expressiveness    
         x = self.bottleneck(x)

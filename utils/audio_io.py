@@ -49,7 +49,7 @@ def match_length(target_wave, noise_wave):
         return extended
 
 
-def mix_audio(target_wave, noise_wave, snr_db):
+def mix_audio(target_wave, noise_wave, snr_db, mode="clean"):
     """Mix clean target and noise at a desired SNR level"""
     if target_wave.shape[-1] != noise_wave.shape[-1]:
         noise_wave = match_length(target_wave, noise_wave)
@@ -72,7 +72,12 @@ def mix_audio(target_wave, noise_wave, snr_db):
 
     mixture = target_wave + noise_scaled
     
-    return mixture.clamp(-1.0, 1.0), target_wave
+    if mode=="clean":
+        return mixture.clamp(-1.0, 1.0), target_wave
+    elif mode=="noise":
+        return mixture.clamp(-1.0, 1.0), noise_wave
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
 
 
 def list_audio_files(directory, exts=(".wav", ".flac")):

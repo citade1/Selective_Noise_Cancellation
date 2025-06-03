@@ -3,81 +3,43 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from models import UNet, AttentionUNet, StackedTransformerEncoder
-from utils import split_dataset
+from utils import split_dataset, snr
+from utils.csv_logger import CSVLogger
+from utils.early_stopping import EarlyStopping
 from data_preparation import SpectrogramDataset
-from datetime import datetime
 import argparse
 from tqdm import tqdm
+from datetime import datetime
 
+LOG_DIR = "runs"
+os.makedirs(LOG_DIR, exist_ok=True)
 
-# -----------------
-# Evaluation Metric
-# -----------------
-def snr(pred, target):
-    signal_power = torch.mean(target**2)
-    noise_power = torch.mean((target - pred)**2)
-    if noise_power < 1e-10:
-        return torch.tensor(float("inf")) # perfect match 
-    snr = 10 * torch.log10(signal_power / (noise_power + 1e-8))
-    return snr
+# ---------
+# one epoch
+# ---------
 
+def run_epoch(model, dataloader, criterion, optimizer, device, mode="train"):
+    model.train() if mode=="train" else model.eval()
+    total_loss, total_snr = 0.0, 0.0
 
-# ----------------
-# Traning Function
-# ----------------
-def train(model, dataloader, criterion, optimizer, scheduler, device, epoch, writer, val_loader, best_val_loss, save_path):
-    model.train()
-    running_loss, running_snr = 0.0, 0.0
-
-    for i, (mixture, target) in enumerate(tqdm(dataloader, desc="Training")):
+    for mixture, target, _, _ in tqdm(dataloader, desc=f"{mode.capitalize()}"):
         mixture, target = mixture.to(device), target.to(device)
 
-        optimizer.zero_grad()
+        if mode=="train":
+            optimizer.zero_grad()
         output = model(mixture)
         loss = criterion(output, target)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-        running_snr += snr(output, target).item()
-
-        if i%10==0:
-            print(f"Batch {i+1}/{len(dataloader)}, Loss:{loss.item():.4f}, SNR: {snr(output, target):.2f} dB")
-
-    avg_loss = running_loss / len(dataloader) 
-    avg_snr = running_snr / len(dataloader)  
-
-    # Validation
-    model.eval()
-    val_loss, val_snr = 0.0, 0.0
-
-    with torch.no_grad():
-        for mixture, target in val_loader:
-            mixture, target = mixture.to(device), target.to(device)
-            output = model(mixture)
-            val_loss += criterion(output, target).item()
-            val_snr += snr(output, target).item()
+        if mode=="train":
+            loss.backward()
+            optimizer.step()
+        
+        total_loss += loss.item()
+        total_snr += snr(output, target).item()
     
-    val_loss /= len(val_loader)
-    val_snr /= len(val_loader)
+    n = len(dataloader)
+    return total_loss/n, total_snr/n
 
-    scheduler.step(val_loss)
-
-    writer.add_scalar("Loss/train", avg_loss, epoch)
-    writer.add_scalar("Loss/val", val_loss, epoch)
-    writer.add_scalar("SNR/train", avg_snr, epoch)
-    writer.add_scalar("SNR/val", val_snr, epoch)
-
-    print(f"Epoch Summary - Train Loss: {avg_loss:.4f}, Val Loss: {val_loss:.4f}, SNR: {val_snr:.2f} dB")
-
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        torch.save(model.state_dict(), save_path)
-        print(f"Best model updated and saved to {save_path}")
-
-    return best_val_loss
 
 
 # -----------
@@ -94,16 +56,16 @@ if __name__ == "__main__":
     parser.add_argument('--snr_min', type=float, default=-5.0)
     parser.add_argument('--snr_max', type=float, default=5.0)
     parser.add_argument('--n_noises', type=int, default=3)
-    parser.add_argument('--target_dir', type=str, required=True)
-    parser.add_argument('--noise_fsd_dir', type=str, required=True)
-    parser.add_argument('--noise_misc_dir', type=str, required=True)
+    parser.add_argument('--earlystop_patience', type=int, default=2)
+    parser.add_argument('--target_dir', type=str, required=True) # input directory for target
+    parser.add_argument('--noise_fsd_dir', type=str, required=True) # input directory for noises (fsd50k dataset)
+    parser.add_argument('--noise_misc_dir', type=str, required=True) # input directory for misc noises
     args = parser.parse_args()
 
     os.makedirs(args.save_dir, exist_ok=True)
-    run_name = datetime.now().strftime("%Y%m%d-%H%M%S")
-    writer = SummaryWriter(log_dir=os.path.join("runs", run_name))
-
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    
+    # device
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") # mac os 
 
     # model configuration
     if args.model == "unet":
@@ -129,10 +91,6 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=0)
     
-    for i, (mixture, target) in enumerate(train_loader):
-        print("Mixture shape:", mixture.shape)  # Expecting (B, 1, F, T)
-        break
-
     # Loss
     criterion = nn.MSELoss()
 
@@ -140,24 +98,80 @@ if __name__ == "__main__":
     if args.optimizer == "adam":
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
     elif args.optimizer == "adamw":
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     elif args.optimizer =="sgd":
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
     
     # Scheduler
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=2)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=1)
 
     # Resume from checkpoint if exists
     best_val_loss = float('inf')
-    save_path = os.path.join(args.save_dir, f"{args.model}_best.pt")
-
+    save_path = os.path.join(args.save_dir, f"{args.model}_best_checkpoint.pt")
     if os.path.exists(save_path):
-        model.load_state_dict(torch.load(save_path))
+        checkpoint = torch.load(save_path)
+        
+        model.load_state_dict(checkpoint['model_state'])
+        optimizer.load_state_dict(checkpoint['optimizer_state'])
         print(f"Resumed training from checkpoint: {save_path}")
+
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     
+    TRAIN_LOG_FILE = f"train_log_{args.model}.csv"
+    log_file_path = os.path.join(LOG_DIR, TRAIN_LOG_FILE)
+    
+    early_stopper = EarlyStopping(patience=args.earlystop_patience)
+
     for epoch in range(args.epochs):
         print(f"\nEpoch {epoch+1}/{args.epochs}")
-        best_val_loss = train(model, train_loader, criterion, optimizer, scheduler, device, 
-                              epoch, writer, val_loader, best_val_loss, save_path)
+        # train
+        train_loss, train_snr = run_epoch(model, train_loader, criterion, optimizer, device, mode="train")
+        # validation
+        val_loss, val_snr = run_epoch(model, val_loader, criterion, None, device, mode="validation")
+
+        # adapt learning rate
+        scheduler.step(val_loss)
+
+        # logging
     
-    writer.close()
+        train_logger = CSVLogger(
+            file_path=log_file_path,
+            fieldnames=["timestamp", "model", "epoch", "train_loss", "val_loss", 
+                        "train_snr", "val_snr", "lr", "snr_min", "snr_max", "n_noises"]
+        )
+        train_logger.log({
+            "timestamp":timestamp,
+            "model": args.model,
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "train_snr": train_snr,
+            "val_snr": val_snr,
+            "lr": optimizer.param_groups[0]['lr'],
+            "snr_min": args.snr_min,
+            "snr_max": args.snr_max,
+            "n_noises": args.n_noises
+        })
+        train_logger.close()
+        print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, "
+      f"Train SNR: {train_snr:.2f}dB, Val SNR: {val_snr:.2f}dB")
+
+        # save model if val_loss has been improved
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            checkpoint = {
+                "best_val_loss": val_loss,
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict()
+            }
+            torch.save(checkpoint, save_path)
+            print(f"Best model updated and saved to {save_path}")
+
+        early_stopper(val_loss)
+        if early_stopper.early_stop:
+            print(f"Early stopping triggered after {epoch+1}epochs")
+            break
+        
+        
+        
+    

@@ -1,6 +1,5 @@
 import os
 import torch
-from tqdm import tqdm
 import argparse
 
 def fix_waveform_shape(waveform):
@@ -30,8 +29,6 @@ def fix_all_pt_files(root_dir):
             path = os.path.join(root,fname)
             try:
                 tensor = torch.load(path)
-                if not isinstance(tensor, torch.Tensor):
-                    continue
 
                 fixed_tensor = fix_waveform_shape(tensor)
 

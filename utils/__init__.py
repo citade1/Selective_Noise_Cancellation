@@ -15,7 +15,17 @@ from .spectrogram import(
     normalize_spectrogram,
     denormalize_spectrogram
 )
+from .visualize_results import tensor_to_img
+
+from .metrics import snr
+
 from .data_split import split_dataset
+
+from .dnsmos_infer import run_dnsmos
+
+from .csv_logger import CSVLogger
+
+from .early_stopping import EarlyStopping
 
 __all__ = [
     "load_audio",
@@ -30,5 +40,7 @@ __all__ = [
     "spectrogram_to_waveform",
     "normalize_spectrogram",
     "denormalize_spectrogram",
-    "split_dataset"
+    "split_dataset",
+    "tensor_to_img",
+    "snr"
 ]

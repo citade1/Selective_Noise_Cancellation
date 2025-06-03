@@ -9,17 +9,17 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
         super().__init__()
 
-        self.pe = torch.zeros(max_len, d_model) # shape = (T, D) -> (max sequence length, embedding dimensions)
+        pe = torch.zeros(max_len, d_model) # shape = (T, D) -> (max sequence length, embedding dimensions)
 
         position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1) # pos, shape=(T, 1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)) # denominator: e^(-log(10000)*2i/d_model), shape=(D/2,)
 
-        self.pe[:, 0::2] = torch.sin(position * div_term) # shape = (T, D/2)
-        self.pe[:, 1::2] = torch.cos(position * div_term) # shape = (T, D/2)
+        pe[:, 0::2] = torch.sin(position * div_term) # shape = (T, D/2)
+        pe[:, 1::2] = torch.cos(position * div_term) # shape = (T, D/2)
 
-        self.pe = self.pe.unsqueeze(0) # shape = (1, T, D)
+        pe = pe.unsqueeze(0) # shape = (1, T, D)
 
-        self.register_buffer("pe", self.pe) # non-learnable
+        self.register_buffer("pe", pe) # non-learnable
 
     def forward(self, x):
         # x : (B, T, D) ->(batch, sequence_len, embedding_dim)
